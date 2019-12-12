@@ -7,11 +7,14 @@
 	<persistence-unit name="helidon-tx-test-pu" transaction-type="JTA">
 		<description>Persistence unit for testing transactions with Helidon and JPA</description>
 		<jta-data-source>helidonTxTestDataSource</jta-data-source>
-		<shared-cache-mode>NONE</shared-cache-mode>
 		
 		<!-- Entities -->
 		<class>org.test.tx.model.Department</class>
 		<class>org.test.tx.model.Employee</class>
+
+		<!-- <exclude-unlisted-classes>true</exclude-unlisted-classes> -->
+		<!-- <shared-cache-mode>NONE</shared-cache-mode> -->
+		<!-- <validation-mode>AUTO</validation-mode> -->
 		
 		<!-- See https://www.eclipse.org/eclipselink/documentation/2.7/jpa/extensions/persistenceproperties_ref.htm -->
 		<properties>
