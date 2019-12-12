@@ -1,0 +1,11 @@
+server:
+  port: 8081
+oracle:
+  ucp:
+    jdbc:
+      PoolDataSource:
+        helidonTxTestDataSource:
+          connectionFactoryClassName: org.h2.jdbcx.JdbcDataSource
+          URL: jdbc:h2:mem:helidonTxTest;MODE=Oracle;AUTOCOMMIT=FALSE;INIT=RUNSCRIPT FROM 'classpath:DatabaseSetup.ddl'
+          user: sa
+          password:

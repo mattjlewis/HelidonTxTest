@@ -1,0 +1,10 @@
+server:
+  port: 8081
+javax:
+  sql:
+    DataSource:
+      helidonTxTestDataSource:
+        connectionFactoryClassName: org.h2.jdbcx.JdbcDataSource
+        URL: jdbc:h2:mem:helidonTxTest;INIT=RUNSCRIPT FROM 'classpath:DatabaseSetup.ddl'
+        user: sa
+        password:
