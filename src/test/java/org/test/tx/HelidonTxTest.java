@@ -2,41 +2,52 @@ package org.test.tx;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.fail;
 
-import java.lang.annotation.Annotation;
 import java.util.Arrays;
 import java.util.List;
 
-import javax.enterprise.inject.Any;
+import javax.enterprise.context.Dependent;
 import javax.enterprise.inject.se.SeContainer;
+import javax.enterprise.inject.se.SeContainerInitializer;
+import javax.inject.Inject;
 import javax.persistence.EntityManager;
-import javax.transaction.HeuristicMixedException;
-import javax.transaction.HeuristicRollbackException;
-import javax.transaction.NotSupportedException;
-import javax.transaction.RollbackException;
-import javax.transaction.SystemException;
-import javax.transaction.TransactionManager;
+import javax.persistence.EntityManagerFactory;
+import javax.persistence.EntityTransaction;
+import javax.persistence.PersistenceUnit;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.test.tx.model.Department;
 import org.test.tx.model.Employee;
-import org.test.tx.service.DepartmentService;
+import org.test.tx.service.DepartmentServiceInterface;
+import org.test.tx.service.ResourceLocal;
 
 import io.helidon.microprofile.server.Server;
 
 @SuppressWarnings("static-method")
+@Dependent
 public class HelidonTxTest {
 	private static SeContainer cdiContainer;
 	private static Server server;
+	@PersistenceUnit(unitName = "HelidonTxTestPuLocal")
+	private EntityManagerFactory entityManagerFactory;
+	//@Inject
+	//@Inject @AppManaged
+	//@Inject @ExtendedPu
+	@Inject @ResourceLocal
+	private DepartmentServiceInterface departmentService;
 
 	@BeforeAll
 	public static void setup() {
-		server = Server.create().start();
-		cdiContainer = server.cdiContainer();
+		cdiContainer = SeContainerInitializer.newInstance().addBeanClasses(HelidonTxTest.class).initialize();
 		assertNotNull(cdiContainer);
+		
+		server = Server.create().start();
+		//cdiContainer = server.cdiContainer();
+		//assertNotNull(cdiContainer);
 	}
 
 	@AfterAll
@@ -45,92 +56,119 @@ public class HelidonTxTest {
 			server.stop();
 			server = null;
 		}
+		if (cdiContainer != null) {
+			cdiContainer.close();
+		}
 	}
 	
-	@Any
-	static class MyClass {
-		// Ignore
+	static EntityManagerFactory getEntityManagerFactory() {
+		return getSelf().entityManagerFactory;
 	}
 
-	static EntityManager getEntityManager() throws ClassNotFoundException {
-		/*
-  - Configurator Bean [class io.helidon.integrations.cdi.jpa.JpaExtension, types: CdiTransactionScopedEntityManager, DelegatingEntityManager, EntityManager, Object, qualifiers: @Any @ContainerManaged @CdiTransactionScoped @Synchronized @Named],
-  - Configurator Bean [class io.helidon.integrations.cdi.jpa.JpaExtension, types: NonTransactionalEntityManager, DelegatingEntityManager, EntityManager, Object, qualifiers: @Any @NonTransactional @Named],
-  - Configurator Bean [class io.helidon.integrations.cdi.jpa.JpaExtension, types: JpaTransactionScopedEntityManager, DelegatingEntityManager, EntityManager, Object, qualifiers: @Any @JpaTransactionScoped @ContainerManaged @Synchronized @Named],
-  - Configurator Bean [class io.helidon.integrations.cdi.jpa.JpaExtension, types: CdiTransactionScopedEntityManager, DelegatingEntityManager, EntityManager, Object, qualifiers: @Any @ContainerManaged @CdiTransactionScoped @Unsynchronized @Named]
-		 */
-		// FIXME I'm being stupid - how do I get a reference to the javax.enterprise.inject.Any annotation?
-		Annotation ann = null;
-		for (Annotation a : MyClass.class.getAnnotations()) {
-			ann = a;
-		}
-		return (EntityManager) cdiContainer.select(Class.forName("io.helidon.integrations.cdi.jpa.JpaTransactionScopedEntityManager"), ann).get();
-		//return cdiContainer.select(EntityManager.class).get();
+	static DepartmentServiceInterface getDepartmentService() {
+		return getSelf().departmentService;
+	}
+	
+	static HelidonTxTest getSelf() {
+		return cdiContainer.select(HelidonTxTest.class).get();
 	}
 
-	static TransactionManager getTransactionManager() {
-		return cdiContainer.select(TransactionManager.class).get();
-	}
-
-	static DepartmentService getDepartmentService() {
-		return cdiContainer.select(DepartmentService.class).get();
-	}
-
-	//@Test
-	public void entityManagerDepartmentTest() throws NotSupportedException, SystemException, SecurityException,
-			IllegalStateException, RollbackException, HeuristicMixedException, HeuristicRollbackException, ClassNotFoundException {
-		EntityManager em = getEntityManager();
-		assertNotNull(em);
-		TransactionManager tm = getTransactionManager();
-		assertNotNull(tm);
+	@Test
+	public void entityManagerDepartmentTest() {
+		EntityManagerFactory emf = getEntityManagerFactory();
+		assertNotNull(emf);
 
 		// Create a new department object with no employees
 		Department dept = new Department("dept1");
 
-		// Create it in the database
-		tm.begin();
-		em.persist(dept);
-		tm.commit();
+		{
+			EntityManager em = emf.createEntityManager();
+			assertNotNull(em);
+			EntityTransaction tx = em.getTransaction();
+			// Create it in the database
+			tx.begin();
+			em.persist(dept);
+			tx.commit();
+			em.clear();
+			em.close();
+		}
 
 		Integer id = dept.getId();
 		assertNotNull(id);
 
 		// Find the department
-		Department found_dept = em.find(Department.class, id);
-		assertNotNull(found_dept);
-		assertNotNull(found_dept.getId());
-		assertEquals(dept.getName(), found_dept.getName());
+		Department found_dept = null;
+		{
+			EntityManager em = emf.createEntityManager();
+			assertNotNull(em);
+			found_dept = em.find(Department.class, id);
+			assertNotNull(found_dept);
+			assertNotNull(found_dept.getId());
+			assertEquals(dept.getName(), found_dept.getName());
+			em.clear();
+			em.close();
+		}
 
 		// Update the department
-		tm.begin();
-		found_dept = em.find(Department.class, id);
-		assertNotNull(found_dept);
-		found_dept.setName(dept.getName() + " - updated");
-		tm.commit();
+		{
+			EntityManager em = emf.createEntityManager();
+			assertNotNull(em);
+			EntityTransaction tx = em.getTransaction();
+			tx.begin();
+			found_dept = em.find(Department.class, id);
+			assertNotNull(found_dept);
+			found_dept.setName(dept.getName() + " - updated");
+			tx.commit();
+			em.clear();
+			em.close();
+		}
 
 		// Find the department
-		found_dept = em.find(Department.class, id);
-		assertNotNull(found_dept);
-		if (found_dept.getName().equals(dept.getName())) {
-			System.out.println("*** Error: department name wasn't updated");
+		{
+			EntityManager em = emf.createEntityManager();
+			assertNotNull(em);
+			found_dept = em.find(Department.class, id);
+			assertNotNull(found_dept);
+			if (found_dept.getName().equals(dept.getName())) {
+				System.out.println("*** Error: department name wasn't updated");
+			}
+			//assertEquals(dept.getName() + " - updated", found_dept.getName());
 		}
-		//assertEquals(dept.getName() + " - updated", found_dept.getName());
 
 		// Cleanup
-		removeDepartment(id);
+		{
+			EntityManager em = getEntityManagerFactory().createEntityManager();
+			assertNotNull(em);
+			EntityTransaction tx = em.getTransaction();
+			tx.begin();
 
-		id = Integer.valueOf(1054);
-		found_dept = em.find(Department.class, id);
-		if (found_dept != null) {
-			fail("Error: Shouldn't have been able to find department " + id + ": found " + found_dept.getId() + " - "
-					+ found_dept.getName());
+			// Remove
+			found_dept = em.find(Department.class, id);
+			assertNotNull(found_dept);
+			assertEquals(id, dept.getId());
+			em.remove(dept);
+			tx.commit();
+		}
+
+		// Check that it has been deleted
+		{
+			EntityManager em = getEntityManagerFactory().createEntityManager();
+			assertNotNull(em);
+			found_dept = em.find(Department.class, id);
+			assertNull(found_dept);
+			if (found_dept != null) {
+				System.out.format("*** Error: Department #%d should have been deleted! Found dept %d: %s%n", id,
+						found_dept.getId(), found_dept.getName());
+				fail("Shouldn't have been able to find department " + id);
+			}
 		}
 	}
 
 	@Test
 	public void departmentWithEmployeesTest() {
-		DepartmentService department_service = getDepartmentService();
+		DepartmentServiceInterface department_service = getDepartmentService();
 		assertNotNull(department_service);
+		System.out.println(department_service.getImplementation());
 
 		// Create a department with employees
 		List<Employee> employees = Arrays.asList(new Employee("Matt", "matt@test.org", "Coffee"),
@@ -186,7 +224,7 @@ public class HelidonTxTest {
 	
 	@Test
 	public void departmentWithEmployeesErrorTest() {
-		DepartmentService department_service = getDepartmentService();
+		DepartmentServiceInterface department_service = getDepartmentService();
 		assertNotNull(department_service);
 
 		// Create a department with employees
@@ -198,39 +236,15 @@ public class HelidonTxTest {
 		// Create it in the database
 		try {
 			Department created_dept = department_service.create(dept);
-			System.out.println("--- Get dept: " + created_dept);
+			System.out.println("--- Got dept '" + created_dept.getName() + "' when it shouldn't have been created");
 			fail("Create should have failed");
 		} catch (Exception e) {
 			System.out.println("--- Error: " + e);
 			Department found_dept = department_service.findByName(dept.getName());
 			if (found_dept != null) {
-				System.out.println("Error: found department with name '" + found_dept + "'");
-				fail("Department shouldn't have been created");
+				System.out.println("Error: Found department with name '" + found_dept.getName() + "'");
+				fail("Should not have been able to find department with name '" + dept.getName() + "' but did");
 			}
-		}
-	}
-	
-	private static void removeDepartment(Integer id) throws NotSupportedException, SystemException, SecurityException,
-			IllegalStateException, RollbackException, HeuristicMixedException, HeuristicRollbackException, ClassNotFoundException {
-		EntityManager em = getEntityManager();
-		assertNotNull(em);
-		TransactionManager tm = getTransactionManager();
-		assertNotNull(tm);
-
-		// Remove
-		tm.begin();
-		Department dept = em.find(Department.class, id);
-		assertNotNull(dept);
-		assertEquals(id, dept.getId());
-		em.remove(dept);
-		tm.commit();
-
-		// Check that it has been deleted
-		dept = em.find(Department.class, id);
-		if (dept != null) {
-			System.out.format("*** Error: Department #%d should have been deleted! Found dept %d: %s%n", id,
-					dept.getId(), dept.getName());
-			//fail("Shouldn't be able to find department " + id);
 		}
 	}
 }

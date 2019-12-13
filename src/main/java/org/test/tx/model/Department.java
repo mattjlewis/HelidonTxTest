@@ -6,6 +6,7 @@ import javax.persistence.Basic;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
@@ -24,7 +25,7 @@ public class Department extends BaseEntity {
 	@Column(length = 20, nullable = true)
 	@Basic(optional = true)
 	private String location;
-	@OneToMany(mappedBy = "department", cascade = CascadeType.ALL, orphanRemoval = true)
+	@OneToMany(mappedBy = "department", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
 	private List<Employee> employees;
 
 	public Department() {

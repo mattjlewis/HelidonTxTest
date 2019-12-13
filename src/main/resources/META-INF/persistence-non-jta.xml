@@ -4,43 +4,6 @@
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/persistence
                         http://xmlns.jcp.org/xml/ns/persistence/persistence_2_2.xsd">
-	<persistence-unit name="HelidonTxTestPuJta" transaction-type="JTA">
-		<description>Persistence unit for testing transactions with Helidon and JPA using JTA container manager transactions</description>
-		<jta-data-source>helidonTxTestDataSource</jta-data-source>
-		
-		<!-- Entities -->
-		<class>org.test.tx.model.BaseEntity</class>
-		<class>org.test.tx.model.Department</class>
-		<class>org.test.tx.model.Employee</class>
-
-		<!-- <exclude-unlisted-classes>true</exclude-unlisted-classes> -->
-		<!-- <shared-cache-mode>NONE</shared-cache-mode> -->
-		<!-- <validation-mode>AUTO</validation-mode> -->
-		
-		<!-- See https://www.eclipse.org/eclipselink/documentation/2.7/jpa/extensions/persistenceproperties_ref.htm -->
-		<properties>
-			<property name="eclipselink.deploy-on-startup" value="true" />
-			<property name="eclipselink.jdbc.native-sql" value="true" />
-			<property name="eclipselink.target-database" value="org.eclipse.persistence.platform.database.H2Platform"/>
-			<!-- <property name="eclipselink.target-database" value="org.eclipse.persistence.platform.database.OraclePlatform"/> -->
-			<!-- <property name="eclipselink.target-database" value="Oracle" /> -->
-			<property name="eclipselink.target-server" value="io.helidon.integrations.cdi.eclipselink.CDISEPlatform" />
-			<property name="eclipselink.weaving" value="false" />
-
-			<!-- DDL generation -->
-			<property name="eclipselink.ddl-generation" value="create-or-extend-tables" />
-			<property name="eclipselink.ddl-generation.output-mode" value="sql-script" />
-			<property name="eclipselink.create-ddl-jdbc-file-name" value="HelidonTxTestDbCreate.ddl" />
-			<property name="eclipselink.drop-ddl-jdbc-file-name" value="HelidonTxTestDbDrop.ddl" />
-
-			<!-- Logging -->
-			<property name="eclipselink.logging.logger" value="JavaLogger" />
-			<property name="eclipselink.logging.level" value="FINEST" />
-			<property name="eclipselink.logging.exceptions" value="true" />
-			<property name="eclipselink.logging.parameters" value="true" />
-		</properties>
-	</persistence-unit>
-	
 	<persistence-unit name="HelidonTxTestPuLocal" transaction-type="RESOURCE_LOCAL">
 		<description>Persistence unit for testing transactions with Helidon and JPA using resource-local transactions</description>
 		<non-jta-data-source>helidonTxTestDataSource</non-jta-data-source>

@@ -1,31 +1,35 @@
 package org.test.tx.service;
 
 import javax.enterprise.context.ApplicationScoped;
-import javax.enterprise.inject.Default;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
+import javax.persistence.PersistenceContextType;
 import javax.transaction.Transactional;
 
 import org.test.tx.model.Department;
 
 @ApplicationScoped
-@Default
-public class DepartmentService implements DepartmentServiceInterface {
-	@PersistenceContext(unitName = "HelidonTxTestPuJta")
+@ExtendedPu
+public class DepartmentServiceExtended implements DepartmentServiceInterface {
+	@PersistenceContext(unitName = "HelidonTxTestPuJta", type = PersistenceContextType.EXTENDED)
 	private EntityManager entityManager;
-
+	
 	@Override
 	public String getImplementation() {
-		return "department service - container managed";
+		return "department service - extended";
 	}
 
 	@Override
 	@Transactional(Transactional.TxType.REQUIRES_NEW)
 	public Department create(final Department department) {
-		// Make sure the many to one relationship is set
-		department.getEmployees().forEach(emp -> emp.setDepartment(department));
-		entityManager.persist(department);
-		return department;
+		try {
+			// Make sure the many to one relationship is set
+			department.getEmployees().forEach(emp -> emp.setDepartment(department));
+			entityManager.persist(department);
+			return department;
+		} finally {
+			entityManager.clear();
+		}
 	}
 
 	@Override
@@ -44,13 +48,21 @@ public class DepartmentService implements DepartmentServiceInterface {
 	@Override
 	@Transactional(Transactional.TxType.REQUIRES_NEW)
 	public Department update(final Department department) {
-		return entityManager.merge(department);
+		try {
+			return entityManager.merge(department);
+		} finally {
+			entityManager.clear();
+		}
 	}
 
 	@Override
 	@Transactional(Transactional.TxType.REQUIRES_NEW)
 	public void remove(final int id) {
-		Department dept = entityManager.merge(get(id));
-		entityManager.remove(dept);
+		try {
+			Department dept = entityManager.merge(entityManager.find(Department.class, Integer.valueOf(id)));
+			entityManager.remove(dept);
+		} finally {
+			entityManager.clear();
+		}
 	}
 }

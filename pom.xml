@@ -25,19 +25,25 @@
 
 		<!-- Plugin versions -->
 		<maven-compiler-plugin.version>3.8.1</maven-compiler-plugin.version>
-		
+
 		<!-- Library versions -->
 		<junit-jupiter.version>5.5.2</junit-jupiter.version>
 		<junit-platform.version>1.5.2</junit-platform.version>
 		<h2-database.version>1.4.200</h2-database.version>
+		<version.lib.eclipselink>2.7.5</version.lib.eclipselink>
 	</properties>
-	
+
 	<dependencyManagement>
 		<dependencies>
 			<dependency>
 				<groupId>com.h2database</groupId>
 				<artifactId>h2</artifactId>
 				<version>${h2-database.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.eclipse.persistence</groupId>
+				<artifactId>org.eclipse.persistence.jpa</artifactId>
+				<version>${version.lib.eclipselink}</version>
 			</dependency>
 		</dependencies>
 	</dependencyManagement>
@@ -73,7 +79,7 @@
 		<!--
 		<dependency>
 			<groupId>io.helidon.integrations.cdi</groupId>
-			<artifactId>helidon-integrations-cdi-datasource-ucp</artifactId>
+			<artifactId>helidon-integrations-cdi-datasource-ucp</artifactId> 
 			<scope>runtime</scope>
 		</dependency>
 		-->
@@ -82,7 +88,7 @@
 			<artifactId>helidon-integrations-cdi-datasource-hikaricp</artifactId>
 			<scope>runtime</scope>
 		</dependency>
-		
+
 		<!-- Provided APIs -->
 		<dependency>
 			<groupId>javax.activation</groupId>
@@ -105,7 +111,7 @@
 			<artifactId>jakarta.json.bind-api</artifactId>
 			<scope>provided</scope>
 		</dependency>
-		
+
 		<!-- Testing -->
 		<dependency>
 			<groupId>org.junit.jupiter</groupId>
@@ -138,7 +144,25 @@
 					<artifactId>maven-compiler-plugin</artifactId>
 					<version>${maven-compiler-plugin.version}</version>
 				</plugin>
-				<!-- This plugin's configuration is used to store Eclipse m2e settings only. It has no influence on the Maven build itself. -->
+				<plugin>
+					<groupId>com.ethlo.persistence.tools</groupId>
+					<artifactId>eclipselink-maven-plugin</artifactId>
+					<version>${version.lib.eclipselink}</version>
+					<dependencies>
+						<dependency>
+							<groupId>javax.annotation</groupId>
+							<artifactId>javax.annotation-api</artifactId>
+							<version>${version.lib.annotation-api}</version>
+						</dependency>
+						<dependency>
+							<groupId>javax.xml.bind</groupId>
+							<artifactId>jaxb-api</artifactId>
+							<version>${version.lib.jaxb-api}</version>
+						</dependency>
+					</dependencies>
+				</plugin>
+				<!-- This plugin's configuration is used to store Eclipse m2e settings 
+					only. It has no influence on the Maven build itself. -->
 				<!-- Added to stop Eclipse incorrectly flagging this as an error. -->
 				<plugin>
 					<groupId>org.eclipse.m2e</groupId>
@@ -193,6 +217,40 @@
 				<executions>
 					<execution>
 						<id>make-index</id>
+					</execution>
+				</executions>
+			</plugin>
+
+			<plugin>
+				<groupId>com.ethlo.persistence.tools</groupId>
+				<artifactId>eclipselink-maven-plugin</artifactId>
+				<version>${version.lib.eclipselink}</version>
+				<dependencies>
+					<dependency>
+						<groupId>javax.annotation</groupId>
+						<artifactId>javax.annotation-api</artifactId>
+						<version>${version.lib.annotation-api}</version>
+					</dependency>
+					<dependency>
+						<groupId>javax.xml.bind</groupId>
+						<artifactId>jaxb-api</artifactId>
+						<version>${version.lib.jaxb-api}</version>
+					</dependency>
+				</dependencies>
+				<executions>
+					<execution>
+						<id>weave</id>
+						<phase>process-classes</phase>
+						<goals>
+							<goal>weave</goal>
+						</goals>
+					</execution>
+					<execution>
+						<id>modelgen</id>
+						<phase>generate-sources</phase>
+						<goals>
+							<goal>modelgen</goal>
+						</goals>
 					</execution>
 				</executions>
 			</plugin>

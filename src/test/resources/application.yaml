@@ -8,4 +8,4 @@ javax:
         username: sa
         password:
         dataSource:
-          url: jdbc:h2:mem:helidonTxTest;INIT=RUNSCRIPT FROM 'classpath:DatabaseSetup.ddl'
+          url: jdbc:h2:mem:helidonTxTest;AUTOCOMMIT=FALSE;INIT=RUNSCRIPT FROM 'classpath:DatabaseSetup.ddl'
