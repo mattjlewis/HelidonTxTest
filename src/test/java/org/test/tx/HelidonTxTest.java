@@ -15,6 +15,7 @@ import javax.inject.Inject;
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.EntityTransaction;
+import javax.persistence.Persistence;
 import javax.persistence.PersistenceUnit;
 
 import org.junit.jupiter.api.AfterAll;
@@ -23,7 +24,6 @@ import org.junit.jupiter.api.Test;
 import org.test.tx.model.Department;
 import org.test.tx.model.Employee;
 import org.test.tx.service.DepartmentServiceInterface;
-import org.test.tx.service.ResourceLocal;
 
 import io.helidon.microprofile.server.Server;
 
@@ -33,18 +33,19 @@ public class HelidonTxTest {
 	private static SeContainer cdiContainer;
 	private static Server server;
 	@PersistenceUnit(unitName = "HelidonTxTestPuLocal")
+	//@PersistenceUnit(unitName = "HelidonTxTestPuJta")
 	private EntityManagerFactory entityManagerFactory;
-	//@Inject
+	@Inject
 	//@Inject @AppManaged
 	//@Inject @ExtendedPu
-	@Inject @ResourceLocal
+	//@Inject @ResourceLocal
 	private DepartmentServiceInterface departmentService;
 
 	@BeforeAll
 	public static void setup() {
 		cdiContainer = SeContainerInitializer.newInstance().addBeanClasses(HelidonTxTest.class).initialize();
 		assertNotNull(cdiContainer);
-		
+
 		server = Server.create().start();
 		//cdiContainer = server.cdiContainer();
 		//assertNotNull(cdiContainer);
@@ -60,7 +61,7 @@ public class HelidonTxTest {
 			cdiContainer.close();
 		}
 	}
-	
+
 	static EntityManagerFactory getEntityManagerFactory() {
 		return getSelf().entityManagerFactory;
 	}
@@ -68,15 +69,50 @@ public class HelidonTxTest {
 	static DepartmentServiceInterface getDepartmentService() {
 		return getSelf().departmentService;
 	}
-	
+
 	static HelidonTxTest getSelf() {
 		return cdiContainer.select(HelidonTxTest.class).get();
+	}
+	
+	@Test
+	public void resourceLocalEntityManagerFactoryTest() {
+		EntityManagerFactory emf = getEntityManagerFactory();
+		assertNotNull(emf);
+		// Possible Helidon bug when using the resource local persistence unit:
+		// Helidon throws a PersistenceException claiming that this is a container managed persistence unit (which it isn't)
+		EntityManager em = emf.createEntityManager();
+		assertNotNull(em);
+		EntityTransaction tx = em.getTransaction();
+		assertNotNull(tx);
 	}
 
 	@Test
 	public void entityManagerDepartmentTest() {
-		EntityManagerFactory emf = getEntityManagerFactory();
+		EntityManagerFactory emf = Persistence.createEntityManagerFactory("HelidonTxTestPuLocal");
+		//EntityManagerFactory emf = getEntityManagerFactory();
 		assertNotNull(emf);
+
+		{
+			EntityManager em = null;
+			EntityTransaction tx = null;
+			// See if we can get a transaction - this will fail if using JTA
+			try {
+				em = emf.createEntityManager();
+				tx = em.getTransaction();
+			} catch (IllegalStateException e) {
+				System.out.println(
+						"IllegalStateException: Skipping entity manager test as you cannot use an entity transaction when using a JTA persistence unit: "
+								+ e);
+				return;
+			} finally {
+				if (tx != null && tx.isActive()) {
+					tx.rollback();
+				}
+				if (em != null && em.isOpen()) {
+					em.close();
+				}
+			}
+		}
 
 		// Create a new department object with no employees
 		Department dept = new Department("dept1");
@@ -137,7 +173,7 @@ public class HelidonTxTest {
 
 		// Cleanup
 		{
-			EntityManager em = getEntityManagerFactory().createEntityManager();
+			EntityManager em = emf.createEntityManager();
 			assertNotNull(em);
 			EntityTransaction tx = em.getTransaction();
 			tx.begin();
@@ -145,14 +181,14 @@ public class HelidonTxTest {
 			// Remove
 			found_dept = em.find(Department.class, id);
 			assertNotNull(found_dept);
-			assertEquals(id, dept.getId());
-			em.remove(dept);
+			assertEquals(id, found_dept.getId());
+			em.remove(found_dept);
 			tx.commit();
 		}
 
 		// Check that it has been deleted
 		{
-			EntityManager em = getEntityManagerFactory().createEntityManager();
+			EntityManager em = emf.createEntityManager();
 			assertNotNull(em);
 			found_dept = em.find(Department.class, id);
 			assertNull(found_dept);
@@ -221,7 +257,7 @@ public class HelidonTxTest {
 		}
 		//assertNull(found_dept);
 	}
-	
+
 	@Test
 	public void departmentWithEmployeesErrorTest() {
 		DepartmentServiceInterface department_service = getDepartmentService();
@@ -233,7 +269,7 @@ public class HelidonTxTest {
 				new Employee("Freddie", "freddie@test.org", "Tea"));
 		Department dept = new Department("HR", "Reading", employees);
 
-		// Create it in the database
+		// Attempt to create it in the database - this will fail
 		try {
 			Department created_dept = department_service.create(dept);
 			System.out.println("--- Got dept '" + created_dept.getName() + "' when it shouldn't have been created");

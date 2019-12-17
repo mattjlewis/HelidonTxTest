@@ -15,6 +15,10 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 
+import org.eclipse.microprofile.openapi.annotations.Operation;
+import org.eclipse.microprofile.openapi.annotations.media.Content;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
 import org.test.tx.model.Department;
 import org.test.tx.service.DepartmentService;
 
@@ -30,6 +34,8 @@ public class DepartmentResource {
 
 	@POST
 	@Consumes(MediaType.APPLICATION_JSON)
+	@Operation(summary = "Create a new department")
+	@APIResponse(description = "The created department", content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(implementation = Department.class)))
 	public Response create(@Context UriInfo uriInfo, Department department) {
 		try {
 			Department dept = departmentService.create(department);
@@ -40,6 +46,8 @@ public class DepartmentResource {
 	}
 
 	@GET
+	@Operation(summary = "Get a specific department")
+	@APIResponse(description = "The department instance", content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(implementation = Department.class)))
 	public Response get(@PathParam("id") int id) {
 		try {
 			return Response.ok(departmentService.get(id)).build();
@@ -50,6 +58,8 @@ public class DepartmentResource {
 
 	@PATCH
 	@Consumes(MediaType.APPLICATION_JSON)
+	@Operation(summary = "Update a department")
+	@APIResponse(description = "The department instance", content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(implementation = Department.class)))
 	public Response update(@Context UriInfo uriInfo, Department department) {
 		try {
 			Department dept = departmentService.update(department);
