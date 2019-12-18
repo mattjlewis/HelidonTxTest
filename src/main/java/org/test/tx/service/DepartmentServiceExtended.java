@@ -18,7 +18,7 @@ public class DepartmentServiceExtended implements DepartmentServiceInterface {
 
 	@Override
 	public String getImplementation() {
-		return "department service - extended";
+		return "Department service - extended";
 	}
 
 	@Override

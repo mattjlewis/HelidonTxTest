@@ -11,14 +11,14 @@ import javax.transaction.Transactional;
 import org.test.tx.model.Department;
 
 @ApplicationScoped
-@AppManaged
-public class DepartmentServiceAppManaged implements DepartmentServiceInterface {
+@ContainerManagedEmf
+public class DepartmentServiceContainerManagedEmf implements DepartmentServiceInterface {
 	@PersistenceUnit(unitName = "HelidonTxTestPuJta")
 	private EntityManagerFactory emf;
 
 	@Override
 	public String getImplementation() {
-		return "department service - application managed";
+		return "Department service - container managed EMF & JTA";
 	}
 
 	@Override

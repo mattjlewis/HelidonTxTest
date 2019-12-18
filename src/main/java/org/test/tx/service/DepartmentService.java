@@ -18,7 +18,7 @@ public class DepartmentService implements DepartmentServiceInterface {
 
 	@Override
 	public String getImplementation() {
-		return "department service - container managed";
+		return "Department service - container managed & JTA";
 	}
 
 	@Override

@@ -18,7 +18,7 @@ public class DepartmentServiceNonJta implements DepartmentServiceInterface {
 
 	@Override
 	public String getImplementation() {
-		return "department service - resource local";
+		return "Department service - application managed EMF & resource local";
 	}
 
 	@Override
