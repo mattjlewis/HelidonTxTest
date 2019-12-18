@@ -1,5 +1,7 @@
 package org.test.tx.service;
 
+import java.util.Optional;
+
 import javax.enterprise.context.ApplicationScoped;
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
@@ -39,21 +41,25 @@ public class DepartmentServiceNonJta implements DepartmentServiceInterface {
 	}
 
 	@Override
-	public Department get(final int id) {
+	public Optional<Department> get(final int id) {
 		EntityManager em = emf.createEntityManager();
 		try {
-			return em.find(Department.class, Integer.valueOf(id));
+			return Optional.ofNullable(em.find(Department.class, Integer.valueOf(id)));
 		} finally {
 			em.close();
 		}
 	}
 
 	@Override
-	public Department findByName(final String name) {
+	public Optional<Department> findByName(final String name) {
 		EntityManager em = emf.createEntityManager();
 		try {
-			return em.createNamedQuery("Department.findByName", Department.class).setParameter("name", name)
-					.getSingleResult();
+			var results = em.createNamedQuery("Department.findByName", Department.class).setParameter("name", name)
+					.getResultList();
+			if (results.isEmpty()) {
+				return Optional.empty();
+			}
+			return Optional.of(results.get(0));
 		} finally {
 			em.close();
 		}

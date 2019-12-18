@@ -1,5 +1,7 @@
 package org.test.tx.service;
 
+import java.util.Optional;
+
 import javax.enterprise.context.ApplicationScoped;
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
@@ -38,11 +40,11 @@ public class DepartmentServiceAppManaged implements DepartmentServiceInterface {
 
 	@Override
 	@Transactional(Transactional.TxType.SUPPORTS)
-	public Department get(final int id) {
+	public Optional<Department> get(final int id) {
 		EntityManager em = null;
 		try {
 			em = emf.createEntityManager();
-			return em.find(Department.class, Integer.valueOf(id));
+			return Optional.ofNullable(em.find(Department.class, Integer.valueOf(id)));
 		} finally {
 			if (em != null && em.isOpen()) {
 				em.close();
@@ -52,12 +54,15 @@ public class DepartmentServiceAppManaged implements DepartmentServiceInterface {
 
 	@Override
 	@Transactional(Transactional.TxType.SUPPORTS)
-	public Department findByName(final String name) {
+	public Optional<Department> findByName(final String name) {
 		EntityManager em = null;
 		try {
 			em = emf.createEntityManager();
-			return em.createNamedQuery("Department.findByName", Department.class).setParameter("name", name)
-					.getSingleResult();
+			var results = em.createNamedQuery("Department.findByName", Department.class).setParameter("name", name).getResultList();
+			if (results.isEmpty()) {
+				return Optional.empty();
+			}
+			return Optional.of(results.get(0));
 		} finally {
 			if (em != null && em.isOpen()) {
 				em.close();
@@ -86,8 +91,7 @@ public class DepartmentServiceAppManaged implements DepartmentServiceInterface {
 		EntityManager em = null;
 		try {
 			em = emf.createEntityManager();
-			Department dept = em.merge(em.find(Department.class, Integer.valueOf(id)));
-			em.remove(dept);
+			em.remove(em.find(Department.class, Integer.valueOf(id)));
 		} finally {
 			if (em != null && em.isOpen()) {
 				em.close();

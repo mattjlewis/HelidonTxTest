@@ -1,5 +1,7 @@
 package org.test.tx.service;
 
+import java.util.Optional;
+
 import javax.enterprise.context.ApplicationScoped;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
@@ -13,7 +15,7 @@ import org.test.tx.model.Department;
 public class DepartmentServiceExtended implements DepartmentServiceInterface {
 	@PersistenceContext(unitName = "HelidonTxTestPuJta", type = PersistenceContextType.EXTENDED)
 	private EntityManager entityManager;
-	
+
 	@Override
 	public String getImplementation() {
 		return "department service - extended";
@@ -34,15 +36,19 @@ public class DepartmentServiceExtended implements DepartmentServiceInterface {
 
 	@Override
 	@Transactional(Transactional.TxType.SUPPORTS)
-	public Department get(final int id) {
-		return entityManager.find(Department.class, Integer.valueOf(id));
+	public Optional<Department> get(final int id) {
+		return Optional.ofNullable(entityManager.find(Department.class, Integer.valueOf(id)));
 	}
 
 	@Override
 	@Transactional(Transactional.TxType.SUPPORTS)
-	public Department findByName(final String name) {
-		return entityManager.createNamedQuery("Department.findByName", Department.class).setParameter("name", name)
-				.getSingleResult();
+	public Optional<Department> findByName(final String name) {
+		var results = entityManager.createNamedQuery("Department.findByName", Department.class)
+				.setParameter("name", name).getResultList();
+		if (results.isEmpty()) {
+			return Optional.empty();
+		}
+		return Optional.of(results.get(0));
 	}
 
 	@Override
@@ -59,8 +65,7 @@ public class DepartmentServiceExtended implements DepartmentServiceInterface {
 	@Transactional(Transactional.TxType.REQUIRES_NEW)
 	public void remove(final int id) {
 		try {
-			Department dept = entityManager.merge(entityManager.find(Department.class, Integer.valueOf(id)));
-			entityManager.remove(dept);
+			entityManager.remove(entityManager.find(Department.class, Integer.valueOf(id)));
 		} finally {
 			entityManager.clear();
 		}

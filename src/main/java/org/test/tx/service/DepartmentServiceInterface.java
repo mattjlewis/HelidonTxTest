@@ -1,5 +1,7 @@
 package org.test.tx.service;
 
+import java.util.Optional;
+
 import org.test.tx.model.Department;
 
 public interface DepartmentServiceInterface {
@@ -7,9 +9,9 @@ public interface DepartmentServiceInterface {
 	
 	Department create(final Department department);
 
-	Department get(final int id);
+	Optional<Department> get(final int id);
 
-	Department findByName(final String name);
+	Optional<Department> findByName(final String name);
 
 	Department update(final Department department);
 
