@@ -32,8 +32,8 @@ import io.helidon.microprofile.server.Server;
 public class HelidonTxTest {
 	private static SeContainer cdiContainer;
 	private static Server server;
-	@PersistenceUnit(unitName = "HelidonTxTestPuLocal")
 	//@PersistenceUnit(unitName = "HelidonTxTestPuJta")
+	@PersistenceUnit(unitName = "HelidonTxTestPuLocal")
 	private EntityManagerFactory entityManagerFactory;
 	@Inject
 	//@Inject @AppManaged
@@ -87,7 +87,7 @@ public class HelidonTxTest {
 	}
 
 	@Test
-	public void entityManagerDepartmentTest() {
+	public void resourceLocalEntityManagerDepartmentTest() {
 		EntityManagerFactory emf = Persistence.createEntityManagerFactory("HelidonTxTestPuLocal");
 		//EntityManagerFactory emf = getEntityManagerFactory();
 		assertNotNull(emf);
@@ -125,7 +125,7 @@ public class HelidonTxTest {
 			tx.begin();
 			em.persist(dept);
 			tx.commit();
-			em.clear();
+			//em.clear();
 			em.close();
 		}
 
@@ -141,7 +141,7 @@ public class HelidonTxTest {
 			assertNotNull(found_dept);
 			assertNotNull(found_dept.getId());
 			assertEquals(dept.getName(), found_dept.getName());
-			em.clear();
+			//em.clear();
 			em.close();
 		}
 
@@ -155,11 +155,11 @@ public class HelidonTxTest {
 			assertNotNull(found_dept);
 			found_dept.setName(dept.getName() + " - updated");
 			tx.commit();
-			em.clear();
+			//em.clear();
 			em.close();
 		}
 
-		// Find the department
+		// Find the department to validate it was updated
 		{
 			EntityManager em = emf.createEntityManager();
 			assertNotNull(em);
@@ -168,7 +168,9 @@ public class HelidonTxTest {
 			if (found_dept.getName().equals(dept.getName())) {
 				System.out.println("*** Error: department name wasn't updated");
 			}
-			//assertEquals(dept.getName() + " - updated", found_dept.getName());
+			assertEquals(dept.getName() + " - updated", found_dept.getName());
+			//em.clear();
+			em.close();
 		}
 
 		// Cleanup
@@ -184,6 +186,8 @@ public class HelidonTxTest {
 			assertEquals(id, found_dept.getId());
 			em.remove(found_dept);
 			tx.commit();
+			//em.clear();
+			em.close();
 		}
 
 		// Check that it has been deleted
@@ -197,6 +201,50 @@ public class HelidonTxTest {
 						found_dept.getId(), found_dept.getName());
 				fail("Shouldn't have been able to find department " + id);
 			}
+			//em.clear();
+			em.close();
+		}
+		
+		// Create a department with an employee that breaks database constraints
+		List<Employee> employees = Arrays.asList(new Employee("Rod", "rod@test.org", "Water"),
+				new Employee("Jane", "jane@test.org", "012345678901234567890123456789"),
+				new Employee("Freddie", "freddie@test.org", "Tea"));
+		Department error_dept = new Department("HR", "Reading", employees);
+		
+		// Test error create
+		{
+			EntityManager em = emf.createEntityManager();
+			assertNotNull(em);
+			EntityTransaction tx = em.getTransaction();
+			tx.begin();
+			em.persist(error_dept);
+			System.out.println("*** error_dept.getId() before commit: " + error_dept.getId());
+			try {
+				tx.commit();
+				fail("Create should have failed with a database constraint violation");
+			} catch (Exception e) {
+				System.out.println("***  Error (expected): " + e);
+				// The transaction won't actualy be active as it is rolled back by the entity manager
+				if (tx.isActive()) {
+					System.out.println("*** Trying to rollback the transaction, active? " + tx.isActive());
+					tx.rollback();
+				}
+			} finally {
+				//em.clear();
+				em.close();
+			}
+			System.out.println("*** error_dept.getId() after close: " + error_dept.getId());
+		}
+		
+		// See if we can find the HR department
+		{
+			EntityManager em = emf.createEntityManager();
+			var query = em.createNamedQuery("Department.findByName", Department.class);
+			query.setParameter("name", error_dept.getName());
+			var results = query.getResultList();
+			assertEquals(0, results.size());
+			//em.clear();
+			em.close();
 		}
 	}
 

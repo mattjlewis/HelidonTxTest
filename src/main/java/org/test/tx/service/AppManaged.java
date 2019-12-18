@@ -12,4 +12,5 @@ import javax.inject.Qualifier;
 @Stereotype
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.TYPE, ElementType.FIELD})
-public @interface AppManaged {}
+public @interface AppManaged {
+}
