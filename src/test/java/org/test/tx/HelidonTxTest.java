@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
+import java.net.URI;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -14,11 +15,21 @@ import javax.enterprise.context.Dependent;
 import javax.enterprise.inject.se.SeContainer;
 import javax.enterprise.inject.se.SeContainerInitializer;
 import javax.inject.Inject;
+import javax.json.bind.JsonbBuilder;
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.EntityTransaction;
 import javax.persistence.PersistenceUnit;
+import javax.ws.rs.core.HttpHeaders;
+import javax.ws.rs.core.MediaType;
 
+import org.apache.http.HttpStatus;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.util.EntityUtils;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -37,6 +48,7 @@ import io.helidon.microprofile.server.Server;
 public class HelidonTxTest {
 	private static SeContainer cdiContainer;
 	private static Server server;
+	
 	@PersistenceUnit(unitName = "HelidonTxTestPuJta")
 	private EntityManagerFactory entityManagerFactoryJta;
 	@PersistenceUnit(unitName = "HelidonTxTestPuLocal")
@@ -52,6 +64,9 @@ public class HelidonTxTest {
 	@Inject
 	@ResourceLocal
 	private DepartmentServiceInterface departmentServiceAppManagedResourceLocal;
+	//@Inject
+	//@RestClient
+	//private DepartmentResource restClient;
 
 	private static enum DepartmentServiceType {
 		CONTAINER_MANAGED_JTA, CONTAINER_MANAGED_EMF_JTA, CONTAINER_MANAGED_EXTENDED_JTA, APP_MANAGED_RESOURCE_LOCAL;
@@ -109,6 +124,55 @@ public class HelidonTxTest {
 		}
 
 		return ds;
+	}
+
+	@BeforeEach()
+	public void clearData() {
+		EntityManager em = getEntityManagerFactoryResourceLocal().createEntityManager();
+		EntityTransaction tx = em.getTransaction();
+		tx.begin();
+		int deleted_count = em.createQuery("DELETE FROM Employee").executeUpdate();
+		tx.commit();
+		System.out.println("Deleted " + deleted_count + " employees");
+
+		tx = em.getTransaction();
+		tx.begin();
+		deleted_count = em.createQuery("DELETE FROM Department").executeUpdate();
+		tx.commit();
+		System.out.println("Deleted " + deleted_count + " departments");
+
+		em.close();
+	}
+
+	@Test
+	public void restClientTest() {
+		URI base_uri = URI.create("http://" + server.host() + ":" + server.port());
+		
+		Department dept = new Department("HR", "Reading");
+		
+		try (CloseableHttpClient http_client = HttpClients.createDefault()) {
+			HttpPost post = new HttpPost(base_uri.resolve("/department"));
+			post.addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON);
+			post.setEntity(new StringEntity(JsonbBuilder.create().toJson(dept)));
+
+			try (CloseableHttpResponse response = http_client.execute(post)) {
+				System.out.println("Response status: " + response.getStatusLine());
+				if (response.getStatusLine().getStatusCode() == HttpStatus.SC_CREATED) {
+					Department created_dept = JsonbBuilder.create().fromJson(EntityUtils.toString(response.getEntity()),
+							Department.class);
+					assertNotNull(created_dept);
+					assertNotNull(created_dept.getId());
+					assertEquals(dept.getName(), created_dept.getName());
+					assertEquals(dept.getLocation(), created_dept.getLocation());
+				} else {
+					System.out.println("*** Error: " + EntityUtils.toString(response.getEntity()));
+				}
+			}
+		} catch (Exception e) {
+			System.out.println("Error: " + e);
+			e.printStackTrace();
+			fail(e);
+		}
 	}
 
 	@Test
@@ -279,24 +343,6 @@ public class HelidonTxTest {
 			//em.clear();
 			em.close();
 		}
-	}
-
-	@BeforeEach()
-	public void clearData() {
-		EntityManager em = getEntityManagerFactoryResourceLocal().createEntityManager();
-		EntityTransaction tx = em.getTransaction();
-		tx.begin();
-		int deleted_count = em.createQuery("DELETE FROM Employee").executeUpdate();
-		tx.commit();
-		System.out.println("Deleted " + deleted_count + " employees");
-
-		tx = em.getTransaction();
-		tx.begin();
-		deleted_count = em.createQuery("DELETE FROM Department").executeUpdate();
-		tx.commit();
-		System.out.println("Deleted " + deleted_count + " departments");
-		
-		em.close();
 	}
 
 	@Test

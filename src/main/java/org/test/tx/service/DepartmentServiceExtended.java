@@ -26,7 +26,9 @@ public class DepartmentServiceExtended implements DepartmentServiceInterface {
 	public Department create(final Department department) {
 		try {
 			// Make sure the many to one relationship is set
-			department.getEmployees().forEach(emp -> emp.setDepartment(department));
+			if (department.getEmployees() != null) {
+				department.getEmployees().forEach(emp -> emp.setDepartment(department));
+			}
 			entityManager.persist(department);
 			return department;
 		} finally {

@@ -1,6 +1,7 @@
 package org.test.tx.rest;
 
 import java.net.URI;
+import java.util.Optional;
 
 import javax.inject.Inject;
 import javax.ws.rs.Consumes;
@@ -20,13 +21,15 @@ import org.eclipse.microprofile.openapi.annotations.media.Content;
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
 import org.test.tx.model.Department;
-import org.test.tx.service.DepartmentService;
+import org.test.tx.service.DepartmentServiceInterface;
 
 @Path("department")
 @Produces(MediaType.APPLICATION_JSON)
 public class DepartmentResource {
+	@Context
+	private UriInfo uriInfo;
 	@Inject
-	private DepartmentService departmentService;
+	private DepartmentServiceInterface departmentService;
 
 	private static URI createLocation(UriInfo uriInfo, Department department) {
 		return uriInfo.getAbsolutePathBuilder().path(department.getId().toString()).build();
@@ -36,23 +39,30 @@ public class DepartmentResource {
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Operation(summary = "Create a new department")
 	@APIResponse(description = "The created department", content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(implementation = Department.class)))
-	public Response create(@Context UriInfo uriInfo, Department department) {
+	public Response create(Department department) {
 		try {
 			Department dept = departmentService.create(department);
 			return Response.created(createLocation(uriInfo, department)).entity(dept).build();
 		} catch (Exception e) {
+			System.out.println("Error: " + e);
+			e.printStackTrace();
 			return Response.serverError().entity("Error creating department: " + e).build();
 		}
 	}
 
 	@GET
+	@Path("{id}")
 	@Operation(summary = "Get a specific department")
 	@APIResponse(description = "The department instance", content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(implementation = Department.class)))
 	public Response get(@PathParam("id") int id) {
 		try {
-			return Response.ok(departmentService.get(id)).build();
-		} catch (Exception e) {
+			Optional<Department> opt_dept = departmentService.get(id);
+			if (opt_dept.isPresent()) {
+				return Response.ok(opt_dept.get()).build();
+			}
 			return Response.status(Response.Status.NOT_FOUND).entity(Integer.valueOf(id)).build();
+		} catch (Exception e) {
+			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(Integer.valueOf(id)).build();
 		}
 	}
 
@@ -60,7 +70,7 @@ public class DepartmentResource {
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Operation(summary = "Update a department")
 	@APIResponse(description = "The department instance", content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(implementation = Department.class)))
-	public Response update(@Context UriInfo uriInfo, Department department) {
+	public Response update(Department department) {
 		try {
 			Department dept = departmentService.update(department);
 			return Response.ok(dept).location(createLocation(uriInfo, department)).build();

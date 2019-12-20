@@ -28,7 +28,9 @@ public class DepartmentServiceContainerManagedEmf implements DepartmentServiceIn
 		try {
 			em = emf.createEntityManager();
 			// Make sure the many to one relationship is set
-			department.getEmployees().forEach(emp -> emp.setDepartment(department));
+			if (department.getEmployees() != null) {
+				department.getEmployees().forEach(emp -> emp.setDepartment(department));
+			}
 			em.persist(department);
 			return department;
 		} finally {
