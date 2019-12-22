@@ -1,10 +1,12 @@
 package org.test.tx.rest;
 
 import java.net.URI;
-import java.util.Optional;
 
+import javax.enterprise.context.RequestScoped;
 import javax.inject.Inject;
+import javax.validation.Valid;
 import javax.ws.rs.Consumes;
+import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
 import javax.ws.rs.PATCH;
 import javax.ws.rs.POST;
@@ -21,10 +23,12 @@ import org.eclipse.microprofile.openapi.annotations.media.Content;
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
 import org.test.tx.model.Department;
+import org.test.tx.model.Employee;
 import org.test.tx.service.DepartmentServiceInterface;
 
 @Path("department")
 @Produces(MediaType.APPLICATION_JSON)
+@RequestScoped
 public class DepartmentResource {
 	@Context
 	private UriInfo uriInfo;
@@ -39,15 +43,22 @@ public class DepartmentResource {
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Operation(summary = "Create a new department")
 	@APIResponse(description = "The created department", content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(implementation = Department.class)))
-	public Response create(Department department) {
-		try {
-			Department dept = departmentService.create(department);
-			return Response.created(createLocation(uriInfo, department)).entity(dept).build();
-		} catch (Exception e) {
-			System.out.println("Error: " + e);
-			e.printStackTrace();
-			return Response.serverError().entity("Error creating department: " + e).build();
+	public Response create(@Valid Department department) {
+		var employees = department.getEmployees();
+		if (employees != null && !employees.isEmpty()) {
+			employees.forEach(emp -> {
+				if (emp.getFavouriteDrink() != null && emp.getFavouriteDrink().length() > 20) {
+					System.out.println("*** Length of favourite drink: " + emp.getFavouriteDrink().length());
+					if (emp.getFavouriteDrink().length() > 30) {
+						System.out.println("*** Error: length of favourite drink (" + emp.getFavouriteDrink().length()
+								+ ") is greater than 30");
+					}
+				}
+			});
 		}
+
+		Department dept = departmentService.create(department);
+		return Response.created(createLocation(uriInfo, dept)).entity(dept).build();
 	}
 
 	@GET
@@ -55,15 +66,7 @@ public class DepartmentResource {
 	@Operation(summary = "Get a specific department")
 	@APIResponse(description = "The department instance", content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(implementation = Department.class)))
 	public Response get(@PathParam("id") int id) {
-		try {
-			Optional<Department> opt_dept = departmentService.get(id);
-			if (opt_dept.isPresent()) {
-				return Response.ok(opt_dept.get()).build();
-			}
-			return Response.status(Response.Status.NOT_FOUND).entity(Integer.valueOf(id)).build();
-		} catch (Exception e) {
-			return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(Integer.valueOf(id)).build();
-		}
+		return Response.ok(departmentService.get(id)).build();
 	}
 
 	@PATCH
@@ -71,11 +74,22 @@ public class DepartmentResource {
 	@Operation(summary = "Update a department")
 	@APIResponse(description = "The department instance", content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(implementation = Department.class)))
 	public Response update(Department department) {
-		try {
-			Department dept = departmentService.update(department);
-			return Response.ok(dept).location(createLocation(uriInfo, department)).build();
-		} catch (Exception e) {
-			return Response.serverError().entity("Error updating department " + department.getId() + ": " + e).build();
-		}
+		Department dept = departmentService.update(department);
+		return Response.ok(dept).location(createLocation(uriInfo, department)).build();
+	}
+
+	@POST
+	@Consumes(MediaType.APPLICATION_JSON)
+	@Path("{id}/employee")
+	public Response addEmploye(@PathParam("id") int departmentId, Employee employee) {
+		departmentService.addEmploye(departmentId, employee);
+		return Response.noContent().build();
+	}
+
+	@DELETE
+	@Path("{did}/employee/{eid}")
+	public Response removeEmployee(@PathParam("did") int departmentId, @PathParam("eid") int employeeId) {
+		departmentService.removeEmployee(departmentId, employeeId);
+		return Response.noContent().build();
 	}
 }

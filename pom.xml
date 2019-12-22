@@ -54,13 +54,13 @@
 			<groupId>io.helidon.microprofile.bundles</groupId>
 			<artifactId>helidon-microprofile</artifactId>
 		</dependency>
-		
-        <!-- Required for JSON-Binding -->
+
+		<!-- Required for JSON-Binding -->
 		<dependency>
 			<groupId>org.glassfish.jersey.media</groupId>
 			<artifactId>jersey-media-json-binding</artifactId>
 		</dependency>
-		
+
 		<!-- OpenAPI -->
 		<dependency>
 			<groupId>org.eclipse.microprofile.openapi</groupId>
@@ -106,6 +106,12 @@
 			<artifactId>helidon-integrations-cdi-datasource-hikaricp</artifactId>
 			<scope>runtime</scope>
 		</dependency>
+		
+		<!-- For bean validation -->
+		<dependency>
+			<groupId>org.glassfish.jersey.ext</groupId>
+			<artifactId>jersey-bean-validation</artifactId>
+		</dependency>
 
 		<!-- Provided APIs -->
 		<dependency>
@@ -122,6 +128,10 @@
 			<groupId>javax.transaction</groupId>
 			<artifactId>javax.transaction-api</artifactId>
 			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>javax.validation</groupId>
+			<artifactId>validation-api</artifactId>
 		</dependency>
 
 		<!-- Testing -->
@@ -246,7 +256,7 @@
 			<plugin>
 				<groupId>com.ethlo.persistence.tools</groupId>
 				<artifactId>eclipselink-maven-plugin</artifactId>
-				<version>${version.lib.eclipselink}</version><!--$NO-MVN-MAN-VER$-->
+				<version>${version.lib.eclipselink}</version><!--$NO-MVN-MAN-VER$ -->
 				<dependencies>
 					<dependency>
 						<groupId>javax.annotation</groupId>

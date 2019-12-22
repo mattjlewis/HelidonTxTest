@@ -9,20 +9,32 @@ import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
+import javax.persistence.SequenceGenerator;
+import javax.validation.constraints.Email;
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.Size;
 
 @Entity
+@SequenceGenerator(name = "EmployeeSeq", sequenceName = "EMPLOYEE_SEQ")
 public class Employee {
 	@Id
 	@GeneratedValue(generator = "EmployeeSeq", strategy = GenerationType.SEQUENCE)
 	private Integer id;
 	@Column(length = 20, nullable = false)
 	@Basic(optional = false)
+	@Size(max = 20)
+	@NotBlank
 	private String name;
-	@Column(length = 20, nullable = false)
+	@Column(name = "EMAIL_ADDRESS", length = 255, nullable = false)
 	@Basic(optional = false)
+	@Size(max = 255)
+	@NotBlank
+	@Email
 	private String emailAddress;
-	@Column(length = 20, nullable = true)
+	@Column(name = "FAVOURITE_DRINK", length = 20, nullable = true)
 	@Basic(optional = true)
+	@Size(max = 30)
+	// Note deliberate mismatch between database column size (20) and beans validation size (30)
 	private String favouriteDrink;
 	@ManyToOne
 	@JoinColumn(name = "DEPARTMENT_ID", nullable = false)

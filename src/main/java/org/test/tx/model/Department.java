@@ -12,18 +12,25 @@ import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.NamedQuery;
 import javax.persistence.OneToMany;
+import javax.persistence.SequenceGenerator;
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.Size;
 
 @Entity
 @NamedQuery(name = "Department.findByName", query = "SELECT d from Department d where d.name = :name")
+@SequenceGenerator(name = "DepartmentSeq", sequenceName = "DEPARTMENT_SEQ")
 public class Department extends BaseEntity {
 	@Id
 	@GeneratedValue(generator = "DepartmentSeq", strategy = GenerationType.SEQUENCE)
 	private Integer id;
-	@Column(length = 20, nullable = false)
+	@Column(length = 20, unique = true, nullable = false)
 	@Basic(optional = false)
+	@NotBlank
+	@Size(max = 20)
 	private String name;
 	@Column(length = 20, nullable = true)
 	@Basic(optional = true)
+	@Size(max = 255)
 	private String location;
 	@OneToMany(mappedBy = "department", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
 	private List<Employee> employees;
