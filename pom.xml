@@ -25,12 +25,16 @@
 
 		<!-- Plugin versions -->
 		<maven-compiler-plugin.version>3.8.1</maven-compiler-plugin.version>
+		<maven-dependency-plugin.version>3.1.1</maven-dependency-plugin.version>
 
 		<!-- Library versions -->
 		<junit-jupiter.version>5.5.2</junit-jupiter.version>
 		<junit-platform.version>1.5.2</junit-platform.version>
 		<h2-database.version>1.4.200</h2-database.version>
 		<version.lib.eclipselink>2.7.5</version.lib.eclipselink>
+
+		<package>org.test.tx.rest</package>
+		<mainClass>org.test.tx.rest.Main</mainClass>
 	</properties>
 
 	<dependencyManagement>
@@ -54,13 +58,62 @@
 			<groupId>io.helidon.microprofile.bundles</groupId>
 			<artifactId>helidon-microprofile</artifactId>
 		</dependency>
+		
+		<!-- Security Providers -->
+		<!--
+		<dependency>
+			<groupId>io.helidon.security.providers</groupId>
+			<artifactId>helidon-security-providers-jwt</artifactId>
+			<scope>runtime</scope>
+		</dependency>
+		-->
+		<!--
+		<dependency>
+			<groupId>io.helidon.microprofile</groupId>
+			<artifactId>helidon-microprofile-oidc</artifactId>
+			<scope>runtime</scope>
+		</dependency>
+		-->
+		<!-- Note automatically included as part of the Helidon Microprofile bundle
+		<dependency>
+			<groupId>io.helidon.microprofile.jwt</groupId>
+			<artifactId>helidon-microprofile-jwt-auth</artifactId>
+			<scope>runtime</scope>
+		</dependency>
+		-->
+		<!-- Note automatically included as part of the Helidon Microprofile bundle (via JWT-Auth)
+		<dependency>
+			<groupId>io.helidon.security</groupId>
+			<artifactId>helidon-security-annotations</artifactId>
+			<scope>provided</scope>
+		</dependency>
+		-->
+		
+		<!-- Required for Bean Validation in Jersey JAX-RS -->
+		<dependency>
+			<groupId>org.glassfish.jersey.ext</groupId>
+			<artifactId>jersey-bean-validation</artifactId>
+			<scope>runtime</scope>
+		</dependency>
 
 		<!-- Required for JSON-Binding -->
 		<dependency>
 			<groupId>org.glassfish.jersey.media</groupId>
 			<artifactId>jersey-media-json-binding</artifactId>
+			<scope>runtime</scope>
 		</dependency>
-
+		<!-- Should it be this instead?
+		<dependency>
+			<groupId>io.helidon.media.jsonb</groupId>
+			<artifactId>helidon-media-jsonb-server</artifactId>
+		</dependency>
+		-->
+		<dependency>
+			<groupId>jakarta.json.bind</groupId>
+			<artifactId>jakarta.json.bind-api</artifactId>
+			<!-- <scope>provided</scope> -->
+		</dependency>
+		
 		<!-- OpenAPI -->
 		<dependency>
 			<groupId>org.eclipse.microprofile.openapi</groupId>
@@ -107,10 +160,11 @@
 			<scope>runtime</scope>
 		</dependency>
 		
-		<!-- For bean validation -->
+		<!-- H2 JDBC Service Provider -->
 		<dependency>
-			<groupId>org.glassfish.jersey.ext</groupId>
-			<artifactId>jersey-bean-validation</artifactId>
+			<groupId>com.h2database</groupId>
+			<artifactId>h2</artifactId>
+			<scope>runtime</scope>
 		</dependency>
 
 		<!-- Provided APIs -->
@@ -132,6 +186,7 @@
 		<dependency>
 			<groupId>javax.validation</groupId>
 			<artifactId>validation-api</artifactId>
+			<scope>provided</scope>
 		</dependency>
 
 		<!-- Testing -->
@@ -152,11 +207,6 @@
 			<scope>test</scope>
 		</dependency>
 		<dependency>
-			<groupId>com.h2database</groupId>
-			<artifactId>h2</artifactId>
-			<scope>runtime</scope>
-		</dependency>
-		<dependency>
 			<groupId>io.helidon.microprofile.rest-client</groupId>
 			<artifactId>helidon-microprofile-rest-client</artifactId>
 			<scope>test</scope>
@@ -175,6 +225,11 @@
 					<groupId>org.apache.maven.plugins</groupId>
 					<artifactId>maven-compiler-plugin</artifactId>
 					<version>${maven-compiler-plugin.version}</version>
+				</plugin>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-dependency-plugin</artifactId>
+					<version>${maven-dependency-plugin.version}</version>
 				</plugin>
 				<plugin>
 					<groupId>com.ethlo.persistence.tools</groupId>
@@ -237,6 +292,13 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-dependency-plugin</artifactId>
+				<dependencies>
+					<dependency>
+						<groupId>org.apache.maven.shared</groupId>
+						<artifactId>maven-dependency-analyzer</artifactId>
+						<version>1.11.1</version>
+					</dependency>
+				</dependencies>
 				<executions>
 					<execution>
 						<id>copy-libs</id>

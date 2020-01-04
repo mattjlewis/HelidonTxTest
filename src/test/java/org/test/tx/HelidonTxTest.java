@@ -146,7 +146,7 @@ public class HelidonTxTest {
 		Department dept = new Department("HR", "Reading");
 
 		try (CloseableHttpClient http_client = HttpClients.createDefault()) {
-			HttpPost post = new HttpPost(base_uri.resolve("/department"));
+			HttpPost post = new HttpPost(base_uri.resolve("/rest/department"));
 			post.addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON);
 			post.setEntity(new StringEntity(JsonbBuilder.create().toJson(dept)));
 
@@ -172,7 +172,7 @@ public class HelidonTxTest {
 		dept = new Department("0123456789012356789012356789", "London");
 
 		try (CloseableHttpClient http_client = HttpClients.createDefault()) {
-			HttpPost post = new HttpPost(base_uri.resolve("/department"));
+			HttpPost post = new HttpPost(base_uri.resolve("/rest/department"));
 			post.addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON);
 			post.setEntity(new StringEntity(JsonbBuilder.create().toJson(dept)));
 
@@ -195,7 +195,7 @@ public class HelidonTxTest {
 						new Employee("Freddie", "freddie@test.org", "Tea")));
 
 		try (CloseableHttpClient http_client = HttpClients.createDefault()) {
-			HttpPost post = new HttpPost(base_uri.resolve("/department"));
+			HttpPost post = new HttpPost(base_uri.resolve("/rest/department"));
 			post.addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON);
 			post.setEntity(new StringEntity(JsonbBuilder.create().toJson(dept)));
 
