@@ -1,5 +1,6 @@
 package org.test.tx.rest;
 
+import javax.annotation.security.DenyAll;
 import javax.annotation.security.RolesAllowed;
 import javax.enterprise.context.ApplicationScoped;
 import javax.ws.rs.GET;
@@ -19,8 +20,10 @@ import io.helidon.security.annotations.Authorized;
 @SuppressWarnings("static-method")
 @Authenticated
 @Produces(MediaType.TEXT_HTML)
+@DenyAll
 public class ProtectedResource {
 	@GET
+	@Authorized(false)
 	public String securityContextTest(@Context SecurityContext context) {
 		Subject sub = context.user().get();
 		var grants = sub.grants(Grant.class);
@@ -92,8 +95,10 @@ public class ProtectedResource {
 	
 	@GET
 	@Path("admin")
+	@Authorized
 	@RolesAllowed("admin")
 	public String adminRole(@Context SecurityContext context) {
+		System.out.println(">>> ProtectedResource::adminRole()");
 		return "<html><body><h1>Authorised</h1><p>User: " + context.userName() + "</p></body></html>";
 	}
 
@@ -102,6 +107,7 @@ public class ProtectedResource {
 	@Authorized
 	@RolesAllowed("user")
 	public String userRole(@Context SecurityContext context) {
+		System.out.println(">>> ProtectedResource::userRole()");
 		return "<html><body><h1>Authorised</h1><p>User: " + context.userName() + "</p></body></html>";
 	}
 }

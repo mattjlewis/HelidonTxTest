@@ -1,5 +1,69 @@
 server:
   port: 8081
+  # Location on classpath (e.g. src/main/resources/WEB in maven)
+  static.classpath:
+    location: "/WEB"
+    # Defaults to "/"
+    context: "/web"
+
+mp.jwt:
+  verify:
+    issuer: "https://localhost:9443/oauth2/token"
+    # Note can be any URI with a valid scheme
+    publickey.location: "/Users/matt/devel/HelidonTxTest/wso2carbon.pub"
+
+security:
+  # Defaults to false
+  tracing.enabled: true
+  jersey:
+    analyzers:
+      # Defaults to true
+      jwt.secure-by-default: true
+      # Map JWT-Auth to HTTP-Basic Auth in order for the unit tests to work
+      mp-jwt-auth:
+        auth-method-mapping:
+          - key: "MP-JWT"
+            provider: "http-basic-auth"
+  config.require-encryption: false
+  providers:
+    - http-basic-auth:
+        realm: "HelidonTxTest"
+        users:
+          - login: "admin"
+            password: "${CLEAR=password}"
+            roles: ["admin"]
+          - login: "user1"
+            password: "${CLEAR=password}"
+            roles: ["user"]
+          - login: "user2"
+            password: "${CLEAR=password}"
+            roles: ["HelidonTxTestUser"]
+          - login: "user3"
+            password: "${CLEAR=password}"
+            roles: ["user", "HelidonTxTestUser"]
+    - mp-jwt-auth:
+        atn-token:
+          jwt-audience: "https://localhost:9443"
+    # This is required to enable an authorisation provider that behaves correctly
+    - abac:
+  web-server:
+
+web-server:
+  defaults:
+    authenticator: "http-basic-auth"
+    audit: true
+    authenticate: true
+    authorize: true
+    authentication-optional: false
+    roles-allowed: ["user"]
+  paths:
+    - path: "/{*}"
+#      methods: ["get"]
+      authenticate: true
+      authorize: true
+      authentication-optional: false
+      roles-allowed: ["user"]
+
 javax:
   sql:
     DataSource:

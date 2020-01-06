@@ -5,8 +5,9 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.fail;
 
-import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.Date;
 import java.util.List;
 
@@ -14,7 +15,6 @@ import javax.enterprise.context.Dependent;
 import javax.enterprise.inject.se.SeContainer;
 import javax.enterprise.inject.se.SeContainerInitializer;
 import javax.inject.Inject;
-import javax.json.bind.JsonbBuilder;
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.EntityNotFoundException;
@@ -22,19 +22,19 @@ import javax.persistence.EntityTransaction;
 import javax.persistence.NoResultException;
 import javax.persistence.PersistenceUnit;
 import javax.validation.ConstraintViolationException;
-import javax.ws.rs.core.HttpHeaders;
+import javax.ws.rs.HttpMethod;
+import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.client.Client;
+import javax.ws.rs.client.ClientBuilder;
+import javax.ws.rs.client.Entity;
+import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 
-import org.apache.http.HttpStatus;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
-import org.apache.http.util.EntityUtils;
+import org.glassfish.jersey.client.HttpUrlConnectorProvider;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.test.tx.model.Department;
 import org.test.tx.model.Employee;
@@ -47,6 +47,11 @@ import io.helidon.microprofile.server.Server;
 @SuppressWarnings("static-method")
 @Dependent
 public class HelidonTxTest {
+	private static final String USER_USERNAME = "user1";
+	private static final String USER_PASSWORD = "password";
+	private static final String ADMIN_USERNAME = "admin";
+	private static final String ADMIN_PASSWORD = "password";
+
 	private static SeContainer cdiContainer;
 	private static Server server;
 
@@ -68,6 +73,11 @@ public class HelidonTxTest {
 
 	private static enum DepartmentServiceType {
 		CONTAINER_MANAGED_JTA, CONTAINER_MANAGED_EMF_JTA, APP_MANAGED_RESOURCE_LOCAL;
+	}
+
+	private static String createHttpBasicAuthToken(String username, String password) {
+		return "Basic "
+				+ Base64.getEncoder().encodeToString((username + ":" + password).getBytes(StandardCharsets.UTF_8));
 	}
 
 	@BeforeAll
@@ -121,7 +131,7 @@ public class HelidonTxTest {
 		return ds;
 	}
 
-	@BeforeEach()
+	@AfterEach()
 	public void clearData() {
 		EntityManager em = getEntityManagerFactoryResourceLocal().createEntityManager();
 		EntityTransaction tx = em.getTransaction();
@@ -140,75 +150,118 @@ public class HelidonTxTest {
 	}
 
 	@Test
-	public void restClientTest() {
-		URI base_uri = URI.create("http://" + server.host() + ":" + server.port());
+	public void restClientSecurityTest() {
+		Client client = ClientBuilder.newClient();
+		WebTarget root = client.target("http://" + server.host() + ":" + server.port()).path("rest");
 
-		Department dept = new Department("HR", "Reading");
-
-		try (CloseableHttpClient http_client = HttpClients.createDefault()) {
-			HttpPost post = new HttpPost(base_uri.resolve("/rest/department"));
-			post.addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON);
-			post.setEntity(new StringEntity(JsonbBuilder.create().toJson(dept)));
-
-			try (CloseableHttpResponse response = http_client.execute(post)) {
-				System.out.println("*** REST Response status 1: " + response.getStatusLine());
-				if (response.getStatusLine().getStatusCode() != HttpStatus.SC_CREATED) {
-					System.out.println("*** Error: " + EntityUtils.toString(response.getEntity()));
-					fail("Unexpected response status: " + response.getStatusLine());
-				}
-				Department created_dept = JsonbBuilder.create().fromJson(EntityUtils.toString(response.getEntity()),
-						Department.class);
-				assertNotNull(created_dept);
-				assertNotNull(created_dept.getId());
-				assertEquals(dept.getName(), created_dept.getName());
-				assertEquals(dept.getLocation(), created_dept.getLocation());
+		try (Response response = root.path("protected").request(MediaType.TEXT_HTML).get()) {
+			if (response.getStatus() != Response.Status.UNAUTHORIZED.getStatusCode()) {
+				fail("Unexpected response status: " + response.getStatus());
 			}
-		} catch (Exception e) {
-			System.out.println("Error: " + e);
-			e.printStackTrace();
-			fail(e);
 		}
 
-		dept = new Department("0123456789012356789012356789", "London");
-
-		try (CloseableHttpClient http_client = HttpClients.createDefault()) {
-			HttpPost post = new HttpPost(base_uri.resolve("/rest/department"));
-			post.addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON);
-			post.setEntity(new StringEntity(JsonbBuilder.create().toJson(dept)));
-
-			try (CloseableHttpResponse response = http_client.execute(post)) {
-				System.out.println("*** REST Response status 2: " + response.getStatusLine());
-				if (response.getStatusLine().getStatusCode() != HttpStatus.SC_BAD_REQUEST) {
-					System.out.println("*** Error: " + EntityUtils.toString(response.getEntity()));
-					fail("Unexpected response status: '" + response.getStatusLine());
-				}
+		try (Response response = root.path("protected").request(MediaType.TEXT_HTML)
+				.header("Authorization", createHttpBasicAuthToken(USER_USERNAME, USER_PASSWORD)).get()) {
+			if (response.getStatus() != Response.Status.OK.getStatusCode()) {
+				fail("Unexpected response status: " + response.getStatus());
 			}
-		} catch (Exception e) {
-			System.out.println("*** Error: " + e);
-			e.printStackTrace();
-			fail(e);
 		}
 
-		dept = new Department("IT", "London",
+		try (Response response = root.path("protected/admin").request(MediaType.TEXT_HTML)
+				.header("Authorization", createHttpBasicAuthToken(ADMIN_USERNAME, ADMIN_PASSWORD)).get()) {
+			if (response.getStatus() != Response.Status.OK.getStatusCode()) {
+				fail("Unexpected response status: " + response.getStatus());
+			}
+		}
+
+		try (Response response = root.path("protected/admin").request(MediaType.TEXT_HTML)
+				.header("Authorization", createHttpBasicAuthToken(USER_USERNAME, USER_PASSWORD)).get()) {
+			if (response.getStatus() != Response.Status.FORBIDDEN.getStatusCode()) {
+				fail("Unexpected response status: " + response.getStatus());
+			}
+		}
+
+		try (Response response = root.path("protected/user").request(MediaType.TEXT_HTML)
+				.header("Authorization", createHttpBasicAuthToken(USER_USERNAME, USER_PASSWORD)).get()) {
+			if (response.getStatus() != Response.Status.OK.getStatusCode()) {
+				fail("Unexpected response status: " + response.getStatus());
+			}
+		}
+	}
+
+	@Test
+	public void restClientDepartmentTest() {
+		Client client = ClientBuilder.newClient();
+		// Required to use PATCH
+		client.property(HttpUrlConnectorProvider.SET_METHOD_WORKAROUND, Boolean.TRUE);
+		WebTarget root = client.target("http://" + server.host() + ":" + server.port()).path("rest");
+
+		// Create a department with employees
+		List<Employee> employees = Arrays.asList(new Employee("Matt", "matt@test.org", "Coffee"),
+				new Employee("Fred", "fred@test.org", "Beer"));
+		Department dept = new Department("IT", "London", employees);
+		Department created_dept = null;
+		try (Response response = root.path("department").request(MediaType.APPLICATION_JSON).post(Entity.json(dept))) {
+			if (response.getStatus() != Response.Status.CREATED.getStatusCode()) {
+				fail("Unexpected response status: " + response.getStatus());
+			}
+			System.out.println("Response location: " + response.getLocation());
+			created_dept = response.readEntity(Department.class);
+			assertNotNull(created_dept);
+			assertNotNull(created_dept.getId());
+			assertEquals(dept.getName(), created_dept.getName());
+			assertEquals(dept.getLocation(), created_dept.getLocation());
+		}
+
+		// Find the department
+		Department found_dept = null;
+		try {
+			found_dept = root.path("department").path(created_dept.getId().toString())
+					.request(MediaType.APPLICATION_JSON).get(Department.class);
+			assertNotNull(found_dept);
+			assertNotNull(found_dept.getId());
+			assertEquals(dept.getName(), found_dept.getName());
+			assertEquals(employees.size(), found_dept.getEmployees().size());
+			assertEquals(dept.getEmployees().size(), found_dept.getEmployees().size());
+			assertEquals(1, found_dept.getVersion().intValue());
+		} catch (WebApplicationException e) {
+			fail("Unexpected response status: " + e.getResponse().getStatus());
+			// Here simply to avoid the compiler warning about a potential null pointer access
+			return;
+		}
+
+		// Update the department
+		found_dept.setName(dept.getName() + " - updated");
+		try {
+			Department updated_dept = root.path("department").path(created_dept.getId().toString())
+					.request(MediaType.APPLICATION_JSON)
+					.method(HttpMethod.PATCH, Entity.json(found_dept), Department.class);
+			assertNotNull(updated_dept);
+			assertEquals(dept.getName() + " - updated", updated_dept.getName());
+			assertEquals(found_dept.getVersion().intValue() + 1, updated_dept.getVersion().intValue());
+		} catch (WebApplicationException e) {
+			fail("Unexpected response status: " + e.getResponse().getStatus());
+		}
+
+		// Should trigger bean validation failure
+		dept = new Department("012345678901234567890123456789", "London");
+		try (Response response = root.path("department").request(MediaType.APPLICATION_JSON)
+				.post(Entity.entity(dept, MediaType.APPLICATION_JSON))) {
+			if (response.getStatus() != Response.Status.BAD_REQUEST.getStatusCode()) {
+				fail("Unexpected response status: '" + response.getStatus());
+			}
+		}
+
+		// Should pass bean validation but trigger database constraint violation
+		dept = new Department("HR", "Reading",
 				Arrays.asList(new Employee("Rod", "rod@test.org", "Water"),
 						new Employee("Jane", "jane@test.org", "012345678901234567890123456789"),
 						new Employee("Freddie", "freddie@test.org", "Tea")));
-
-		try (CloseableHttpClient http_client = HttpClients.createDefault()) {
-			HttpPost post = new HttpPost(base_uri.resolve("/rest/department"));
-			post.addHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON);
-			post.setEntity(new StringEntity(JsonbBuilder.create().toJson(dept)));
-
-			try (CloseableHttpResponse response = http_client.execute(post)) {
-				System.out.println("*** REST Response status 3: " + response.getStatusLine());
-				if (response.getStatusLine().getStatusCode() != HttpStatus.SC_CONFLICT) {
-					fail("Unexpected response status '" + response.getStatusLine());
-				}
+		try (Response response = root.path("department").request(MediaType.APPLICATION_JSON)
+				.post(Entity.entity(dept, MediaType.APPLICATION_JSON))) {
+			if (response.getStatus() != Response.Status.CONFLICT.getStatusCode()) {
+				fail("Unexpected response status '" + response.getStatus());
 			}
-		} catch (Exception e) {
-			System.out.println("*** Error: " + e);
-			e.printStackTrace();
-			fail(e);
 		}
 	}
 

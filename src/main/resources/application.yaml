@@ -1,5 +1,83 @@
 server:
   port: 8080
+  # location on classpath (e.g. src/main/resources/WEB in maven)
+  static.classpath:
+    location: "/WEB"
+    # this is optional, defaults to "/"
+    context: "/web"
+
+mp.jwt.verify:
+  issuer: "https://localhost:9443/oauth2/token"
+  publickey.location: "/Users/matt/devel/HelidonTxTest/wso2carbon.pub"
+
+security:
+  properties:
+    # This is a nice way to be able to override this with local properties or env-vars
+    client-id: "Hpm7gITbSppVfkArwgEiDtVnyiUa"
+    client-secret: "${CLEAR=Q7_7fqRvj67tL7olo8wl96BjEQ8a}"
+    identity-uri: "https://localhost:9443"
+    # Used as a base for redirects back to us
+    frontend-uri: "http://localhost:8080"
+  jersey.enabled: true
+  config.require-encryption: false
+  default-authentication-provider: "mp-jwt-auth"
+  providers:
+    - http-basic-auth:
+        realm: "HelidonTxTest"
+        users:
+          - login: "admin1"
+            password: "${CLEAR=password}"
+            roles: ["user", "admin"]
+          - login: "user1"
+            password: "${CLEAR=password}"
+            roles: ["user"]
+    - abac:
+    - mp-jwt-auth:
+        atn-token:
+          jwt-audience: "https://localhost:9443"
+    - jwt:
+        atn-token:
+          jwk-url: "https://localhost:9443/oauth2/jwks"
+    - oidc:
+        # Helidon OIDC configuration
+        # A prefix used for custom scopes
+        #scope-audience: "http://localhost:8080/rest/protected"
+        #base-scopes: "openid"
+        redirect-uri: "/oidc/redirect"
+        frontend-uri: "${ALIAS=security.properties.frontend-uri}"
+        redirect: true
+        max-redirects: 2
+        cookie-name: "OIDC_SESSION"
+      
+        # WSO2 Identity Server configuration
+        client-id: "${ALIAS=security.properties.client-id}"
+        client-secret: "${ALIAS=security.properties.client-secret}"
+        identity-uri: "${ALIAS=security.properties.identity-uri}"
+        oidc-metadata-well-known: true
+        oidc-metadata-url: https://localhost:9443/oauth2/oidcdiscovery/.well-known/openid-configuration
+        #token-endpoint-uri: "https://localhost:9443/oauth2/token"
+        #authorization-endpoint-uri: "https://localhost:9443/oauth2/authorize"
+        validate-with-jwk: true
+        #sign-jwk: 
+        introspect-endpoint-uri: "https://localhost:9443/oauth2/introspect"
+  web-server:
+
+web-server:
+  defaults:
+    authenticator: "http-basic-auth"
+    audit: true
+    authenticate: true
+    authorize: true
+    authentication-optional: false
+    roles-allowed: ["user"]
+  paths:
+    - path: "/{*}"
+#      methods: ["get"]
+      authenticate: true
+      authorize: true
+      authentication-optional: false
+      roles-allowed: ["user"]
+
 javax:
   sql:
     DataSource:
