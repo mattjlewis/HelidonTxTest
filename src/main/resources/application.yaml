@@ -64,7 +64,7 @@ security:
 
 web-server:
   defaults:
-    authenticator: "http-basic-auth"
+    authenticator: "oidc"
     audit: true
     authenticate: true
     authorize: true

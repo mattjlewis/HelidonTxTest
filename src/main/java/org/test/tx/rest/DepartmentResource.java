@@ -60,7 +60,6 @@ public class DepartmentResource {
 	@Path("{id}")
 	@Operation(summary = "Get a specific department")
 	@APIResponse(description = "The department instance", content = @Content(mediaType = MediaType.APPLICATION_JSON, schema = @Schema(implementation = Department.class)))
-	@PermitAll
 	public Response get(@PathParam("id") int id) {
 		System.out.println(">>> get()");
 		return Response.ok(departmentService.get(id)).build();

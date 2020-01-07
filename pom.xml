@@ -67,21 +67,19 @@
 			<scope>runtime</scope>
 		</dependency>
 		-->
-		<!--
 		<dependency>
 			<groupId>io.helidon.microprofile</groupId>
 			<artifactId>helidon-microprofile-oidc</artifactId>
 			<scope>runtime</scope>
 		</dependency>
-		-->
-		<!-- Note automatically included as part of the Helidon Microprofile bundle
+		<!-- Note automatically included as part of the Helidon MicroProfile bundle
 		<dependency>
 			<groupId>io.helidon.microprofile.jwt</groupId>
 			<artifactId>helidon-microprofile-jwt-auth</artifactId>
 			<scope>runtime</scope>
 		</dependency>
 		-->
-		<!-- Note automatically included as part of the Helidon Microprofile bundle (via JWT-Auth)
+		<!-- Note automatically included as part of the Helidon MicroProfile bundle (via JWT-Auth)
 		<dependency>
 			<groupId>io.helidon.security</groupId>
 			<artifactId>helidon-security-annotations</artifactId>
